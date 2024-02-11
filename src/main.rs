@@ -4,7 +4,7 @@ use std::{
 };
 
 use clap::Parser;
-use psl::parse_schema;
+use psl::{parse_schema, schema_ast::ast::FieldType};
 
 /// Visualize a Prisma schema as a d2 diagram.
 #[derive(Debug, Parser)]
@@ -39,6 +39,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let input = read_input(&mut input_reader(args.input_file)?)?;
     let parsed = parse_schema(&input)?;
-    println!("{:?}", parsed);
+    for model in parsed.db.walk_models() {
+        println!("{} {{\n\tshape: sql_table", model.database_name());
+        for field in model.fields() {
+            let f = field.ast_field();
+            let t = match f.field_type {
+                FieldType::Supported(ref i) => &i.name,
+                FieldType::Unsupported(ref s, _) => s,
+            };
+            println!("\t{}: {}", field.name(), t);
+        }
+        println!("}}");
+    }
     Ok(())
 }
