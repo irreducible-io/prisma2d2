@@ -1,0 +1,42 @@
+User {
+	shape: sql_table
+	id: Int { constraint: [primary_key] }
+	email: String { constraint: [unique] }
+	name: String
+	role: Role
+	posts: Post
+	profile: Profile
+}
+
+Profile {
+	shape: sql_table
+	id: Int { constraint: [primary_key] }
+	bio: String
+	user: User
+	userId: Int { constraint: [unique] }
+}
+
+Post {
+	shape: sql_table
+	id: Int { constraint: [primary_key] }
+	createdAt: DateTime
+	updatedAt: DateTime
+	title: String
+	published: Boolean
+	author: User
+	authorId: Int
+	categories: Category
+}
+
+Category {
+	shape: sql_table
+	id: Int { constraint: [primary_key] }
+	name: String
+	posts: Post
+}
+
+Profile -> User
+
+Post -> User
+
+

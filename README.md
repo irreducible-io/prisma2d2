@@ -13,3 +13,5 @@ Options:
   -h, --help                       Print help
   -V, --version                    Print version
 ```
+
+![Example output](/out/schema.svg)
