@@ -109,34 +109,49 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn render(schema: &ValidatedSchema) -> D2Diagram {
     let mut diagram = D2Diagram::new();
     for model in schema.db.walk_models() {
-        diagram.sql_tables.push(render_model(model));
+        let (table, mut relations) = render_model(model);
+        diagram.sql_tables.push(table);
+        diagram.relations.append(&mut relations);
     }
     diagram
 }
 
-fn render_model(model: Walker<'_, ModelId>) -> D2SqlTable {
+fn render_model(model: Walker<'_, ModelId>) -> (D2SqlTable, Vec<D2Relation>) {
     let mut table = D2SqlTable::with_name(model.name().to_owned());
+    let mut relations = vec![];
     for field in model.fields() {
-        table.columns.push(render_field(field));
+        let (column, mut r) = render_field(model.name(), field);
+        table.columns.push(column);
+        relations.append(&mut r);
     }
-    table
+    (table, relations)
 }
 
-fn render_field(field: Walker<'_, (ModelId, FieldId)>) -> D2SqlColumn {
+fn render_field(
+    table_name: &str,
+    field: Walker<'_, (ModelId, FieldId)>,
+) -> (D2SqlColumn, Vec<D2Relation>) {
     let f = field.ast_field();
     let t = match f.field_type {
         FieldType::Supported(ref i) => &i.name,
         FieldType::Unsupported(ref s, _) => s,
     };
     let mut column = D2SqlColumn::with_name_and_datatype(field.name().to_owned(), t.to_owned());
+    let mut relations = vec![];
     for attr in &f.attributes {
         if attr.name.name == "id" {
             column.constraints.push(SqlConstraint::PrimaryKey);
         } else if attr.name.name == "unique" {
             column.constraints.push(SqlConstraint::Unique);
+        } else if attr.name.name == "relation" {
+            relations.push(D2Relation {
+                from: table_name.to_owned(),
+                to: t.to_owned(),
+                label: None,
+            })
         }
     }
-    column
+    (column, relations)
 }
 
 impl Display for D2Diagram {
