@@ -1,6 +1,6 @@
 use std::{
     fmt::Display,
-    io::{BufReader, Read},
+    io::{BufReader, BufWriter, Read, Write},
     path::PathBuf,
 };
 
@@ -72,7 +72,6 @@ impl D2SqlColumn {
 
 enum SqlConstraint {
     PrimaryKey,
-    ForeignKey,
     Unique,
 }
 
@@ -91,18 +90,37 @@ fn input_reader(path: Option<PathBuf>) -> Result<Box<dyn Read>, std::io::Error> 
     }
 }
 
+fn output_writer(path: Option<PathBuf>) -> Result<Box<dyn Write>, std::io::Error> {
+    if let Some(path) = path {
+        let f = std::fs::File::options()
+            .create(true)
+            .write(true)
+            .open(path)?;
+        Ok(Box::new(BufWriter::new(f)))
+    } else {
+        Ok(Box::new(std::io::stdout()))
+    }
+}
+
 fn read_input(read: &mut dyn Read) -> Result<String, std::io::Error> {
     let mut s = String::new();
     read.read_to_string(&mut s)?;
     Ok(s)
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() {
+    if let Err(e) = run() {
+        eprintln!("{}", e);
+    }
+}
+
+fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let input = read_input(&mut input_reader(args.input_file)?)?;
     let parsed = parse_schema(&input)?;
+    let mut out = output_writer(args.output_file)?;
     let diagram = render(&parsed);
-    println!("{}", diagram);
+    write!(out, "{}", diagram)?;
     Ok(())
 }
 
@@ -194,7 +212,6 @@ impl Display for D2SqlTable {
 impl Display for SqlConstraint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SqlConstraint::ForeignKey => write!(f, "foreign_key"),
             SqlConstraint::PrimaryKey => write!(f, "primary_key"),
             SqlConstraint::Unique => write!(f, "unique"),
         }
