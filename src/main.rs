@@ -61,7 +61,10 @@ struct D2SqlColumn {
 }
 
 impl D2SqlColumn {
-    fn with_name_and_datatype(name: String, datatype: String) -> Self {
+    fn with_name_and_datatype(mut name: String, datatype: String) -> Self {
+        if d2_reserved_word(&name) {
+            name.insert(0, '_')
+        }
         D2SqlColumn {
             name,
             datatype,
@@ -225,5 +228,13 @@ impl Display for D2Relation {
             write!(f, ": {}", label)?;
         }
         Ok(())
+    }
+}
+
+fn d2_reserved_word(src: &str) -> bool {
+    match src {
+        "icon" | "style" | "shape" | "class" | "direction" | "width" | "height" | "near"
+        | "tooltip" | "link" | "vars" | "layers" | "scenarios" | "steps" => true,
+        _ => false,
     }
 }
